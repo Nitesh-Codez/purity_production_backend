@@ -1,17 +1,22 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const authRoute = require("./routes/authRoute");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/", authRoute);
+app.use("/", authRoutes);
 
-const PORT = 5000;
+app.get("/", (req, res) => {
+  res.send("Purity Production API Running");
+});
+
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log(`Server running on port ${PORT}`);
 });
