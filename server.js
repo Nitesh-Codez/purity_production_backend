@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/", authRoutes);
-app.use("/", customerRoutes);
+app.use("/api", customerRoutes);
 
 app.get("/", (req, res) => {
   res.send("Purity Production API Running");
