@@ -174,16 +174,10 @@ exports.saveMonthlyTotals = async (req, res) => {
   try {
     const { month, year } = req.body;
 
-    // 1. Basic Validation
     if (!month || !year) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Month और Year जरूरी हैं (Example: month: 4, year: 2026)" 
-      });
+      return res.status(400).json({ success: false, message: "Month/Year missing" });
     }
 
-    // 2. SQL Query: SUM and UPSERT (Update if exists)
-    // यहाँ 'AT TIME ZONE' का इस्तेमाल किया है ताकि India (IST) के हिसाब से सही तारीख पकड़े
     const sql = `
       INSERT INTO monthly_totals (user_id, month, year, total_quantity)
       SELECT 
@@ -204,19 +198,14 @@ exports.saveMonthlyTotals = async (req, res) => {
 
     const result = await db.query(sql, [month, year]);
 
-    // 3. Response
     res.json({
       success: true,
-      message: `${month}/${year} का कुल हिसाब सफलतापूर्वक सुरक्षित कर दिया गया है।`,
-      count: result.rows.length,
+      message: "Data Synced",
       data: result.rows
     });
 
   } catch (error) {
-    console.error("Save Totals Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "सर्वर एरर: हिसाब सेव नहीं हो पाया। चेक करें कि monthly_totals टेबल बनी है या नहीं।" 
-    });
+    console.error("Mismatch Error:", error);
+    res.status(500).json({ success: false, message: "Check if 'user_id' exists in milk_entries" });
   }
 };
