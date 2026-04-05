@@ -122,37 +122,26 @@ exports.getMonthlySummary = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-// DETAILED VIEW FOR A CUSTOMER
+// Get monthly details for a single customer
 exports.getMonthlyDetails = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const { userId } = req.params;
     const { month, year } = req.query;
 
-    // fetch user info
-    const userRes = await db.query(
-      "SELECT id, name, default_milk_quantity FROM users WHERE id=$1",
-      [userId]
-    );
-    if (userRes.rows.length === 0)
-      return res.status(404).json({ message: "User not found" });
-
-    // fetch milk entries
-    const milkRes = await db.query(
-      `SELECT delivery_date, daily_milk, default_milk_quantity,
-              CASE WHEN daily_milk < default_milk_quantity THEN TRUE ELSE FALSE END AS is_naga
-       FROM milk_entries
-       WHERE user_id=$1 AND EXTRACT(MONTH FROM delivery_date) = $2 AND EXTRACT(YEAR FROM delivery_date) = $3
-       ORDER BY delivery_date`,
+    const result = await db.query(
+      `SELECT me.*, u.name, u.daily_milk
+       FROM milk_entries me
+       JOIN users u ON u.id = me.user_id
+       WHERE me.user_id = $1
+         AND EXTRACT(MONTH FROM me.delivery_date) = $2
+         AND EXTRACT(YEAR FROM me.delivery_date) = $3
+       ORDER BY me.delivery_date`,
       [userId, month, year]
     );
 
-    return res.json({
-      user: userRes.rows[0],
-      entries: milkRes.rows
-    });
+    res.json({ data: result.rows });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ error: "Server Error" });
   }
 };
