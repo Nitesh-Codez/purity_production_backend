@@ -3,15 +3,15 @@ const db = require("../db");
 // 1️⃣ Add Customer (Already Provided)
 exports.addCustomer = async (req, res) => {
   try {
-    const { name, mobile, address, joining_date } = req.body;
+    const { name, mobile,daily_milk, address, joining_date } = req.body;
 
     const sql = `
-      INSERT INTO users (name, role, mobile, address, joining_date)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO users (name, role, mobile,daily_milk, address, joining_date)
+      VALUES ($1, $2, $3, $4, $5,$6)
       RETURNING *
     `;
 
-    const values = [name, "customer", mobile, address, joining_date];
+    const values = [name, "customer", mobile,daily_milk, address, joining_date];
 
     const result = await db.query(sql, values);
 
@@ -48,16 +48,16 @@ exports.deleteCustomer = async (req, res) => {
 exports.updateCustomer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, mobile, address } = req.body;
+    const { name, mobile,daily_milk, address } = req.body;
 
     const sql = `
       UPDATE users
-      SET name = $1, mobile = $2, address = $3
-      WHERE id = $4
+      SET name = $1, mobile = $2, daily_milk = $3, address = $4
+      WHERE id = $5
       RETURNING *
     `;
 
-    const values = [name, mobile, address, id];
+    const values = [name, mobile,daily_milk, address, id];
     const result = await db.query(sql, values);
 
     if (result.rows.length === 0) {
