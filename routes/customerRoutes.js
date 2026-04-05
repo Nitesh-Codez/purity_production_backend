@@ -1,34 +1,44 @@
 const express = require("express");
 const router = express.Router();
-const translate = require("google-translate-api-x"); // यहाँ इम्पोर्ट करें
+const axios = require("axios"); // axios इम्पोर्ट करें
 const customerController = require("../controllers/customerController");
 
-// --- TRANSLATION ROUTE ---
+// --- CORRECT TRANSLITERATION ROUTE (Names stay as Names) ---
 router.post("/translate-list", async (req, res) => {
   try {
-    const { texts, targetLang } = req.body;
+    const { texts } = req.body;
     if (!texts || !Array.isArray(texts)) return res.status(400).json({ error: "Required" });
 
-    const translations = await Promise.all(
+    const translationMap = {};
+
+    await Promise.all(
       texts.map(async (text) => {
         try {
-          const result = await translate(text, { to: targetLang || "hi" });
-          return { original: text, translated: result.text };
+          // Google Input Tools API जो 'Honey' को 'हनी' बनाएगी, 'शहद' नहीं
+          const response = await axios.get(
+            `https://inputtools.google.com/request?text=${encodeURIComponent(text)}&itc=hi-t-i0-und&num=1`
+          );
+          
+          if (response.data && response.data[0] === "SUCCESS") {
+            // response.data[1][0][1][0] में असली हिंदी नाम होता है
+            translationMap[text] = response.data[1][0][1][0];
+          } else {
+            translationMap[text] = text;
+          }
         } catch (err) {
-          return { original: text, translated: text };
+          translationMap[text] = text;
         }
       })
     );
 
-    const translationMap = {};
-    translations.forEach(item => translationMap[item.original] = item.translated);
     res.json(translationMap);
   } catch (error) {
+    console.error("Transliteration Error:", error);
     res.status(500).json({ error: "failed" });
   }
 });
 
-// Rest Ro
+// बाकी पुराने रूट्स
 router.post("/add-customer", customerController.addCustomer);
 router.delete("/delete-customer/:id", customerController.deleteCustomer);
 router.put("/update-customer/:id", customerController.updateCustomer);
