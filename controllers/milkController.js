@@ -51,7 +51,6 @@ exports.addMilkEntry = async (req, res) => {
 };
 
 
-const pool = require("../config/db"); // आपका DB कनेक्शन
 
 export const getDailyMilkReport = async (req, res) => {
   try {
@@ -85,5 +84,42 @@ export const getDailyMilkReport = async (req, res) => {
   } catch (err) {
     console.error("Error fetching daily report:", err);
     res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+//
+exports.addMilkEntry = async (req, res) => {
+  try {
+    const { user_id, milk_quantity, delivery_date } = req.body;
+
+    // बेसिक वैलिडेशन
+    if (!user_id || milk_quantity === undefined || !delivery_date) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "user_id, quantity और date ज़रूरी हैं!" 
+      });
+    }
+    const sql = `
+      INSERT INTO milk_entries (user_id, milk_quantity, delivery_date)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (user_id, delivery_date) 
+      DO UPDATE SET milk_quantity = EXCLUDED.milk_quantity
+      RETURNING *
+    `;
+
+    const result = await db.query(sql, [user_id, milk_quantity, delivery_date]);
+
+    res.status(200).json({
+      success: true,
+      message: "Entry Saved Successfully",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Milk Entry Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "सर्वर एरर: एंट्री सेव नहीं हो पाई" 
+    });
   }
 };
