@@ -28,7 +28,7 @@ router.post("/translate-list", async (req, res) => {
   }
 });
 
-// Rest Routes
+// Rest Ro
 router.post("/add-customer", customerController.addCustomer);
 router.delete("/delete-customer/:id", customerController.deleteCustomer);
 router.put("/update-customer/:id", customerController.updateCustomer);
