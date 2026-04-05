@@ -129,17 +129,16 @@ exports.getMonthlyDetails = async (req, res) => {
     const { month, year } = req.query;
 
     const result = await db.query(
-      `SELECT me.*, u.name, u.daily_milk
-       FROM milk_entries me
-       JOIN users u ON u.id = me.user_id
-       WHERE me.user_id = $1
-         AND EXTRACT(MONTH FROM me.delivery_date) = $2
-         AND EXTRACT(YEAR FROM me.delivery_date) = $3
-       ORDER BY me.delivery_date`,
-      [userId, month, year]
-    );
-
-    res.json({ data: result.rows });
+  `SELECT me.*, u.name, u.daily_milk
+   FROM milk_entries me
+   JOIN users u ON u.id = me.user_id
+   WHERE me.user_id = $1
+     AND EXTRACT(MONTH FROM me.delivery_date) = $2
+     AND EXTRACT(YEAR FROM me.delivery_date) = $3
+   ORDER BY me.delivery_date`,
+  [userId, month, year]
+);
+res.json({ data: result.rows }); // yahi data frontend pe use hoga
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server Error" });
