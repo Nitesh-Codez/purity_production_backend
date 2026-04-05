@@ -167,27 +167,33 @@ exports.getMonthlyEntries = async (req, res) => {
   }
 };
 
-// =============================
-// CALCULATE & SAVE MONTHLY TOTALS
-// =============================
+// ===========================================
+// CALCULATE & SAVE MONTHLY TOTALS (FINAL)
+// ===========================================
 exports.saveMonthlyTotals = async (req, res) => {
   try {
     const { month, year } = req.body;
 
+    // 1. Basic Validation
     if (!month || !year) {
-      return res.status(400).json({ success: false, message: "Month और Year जरूरी हैं" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Month और Year जरूरी हैं (Example: month: 4, year: 2026)" 
+      });
     }
 
+    // 2. SQL Query: SUM and UPSERT (Update if exists)
+    // यहाँ 'AT TIME ZONE' का इस्तेमाल किया है ताकि India (IST) के हिसाब से सही तारीख पकड़े
     const sql = `
       INSERT INTO monthly_totals (user_id, month, year, total_quantity)
       SELECT 
         user_id, 
         $1 AS month, 
         $2 AS year, 
-        SUM(CAST(milk_quantity AS DECIMAL)) as total_quantity -- CAST जोड़ा है सुरक्षा के लिए
+        SUM(CAST(milk_quantity AS DECIMAL)) as total_quantity
       FROM milk_entries
-      WHERE EXTRACT(MONTH FROM delivery_date) = $1
-        AND EXTRACT(YEAR FROM delivery_date) = $2
+      WHERE EXTRACT(MONTH FROM delivery_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = $1
+        AND EXTRACT(YEAR FROM delivery_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = $2
       GROUP BY user_id
       ON CONFLICT (user_id, month, year)
       DO UPDATE SET 
@@ -198,15 +204,19 @@ exports.saveMonthlyTotals = async (req, res) => {
 
     const result = await db.query(sql, [month, year]);
 
+    // 3. Response
     res.json({
       success: true,
-      message: `महीने (${month}/${year}) का हिसाब अपडेट कर दिया गया है।`,
+      message: `${month}/${year} का कुल हिसाब सफलतापूर्वक सुरक्षित कर दिया गया है।`,
       count: result.rows.length,
       data: result.rows
     });
 
   } catch (error) {
     console.error("Save Totals Error:", error);
-    res.status(500).json({ success: false, message: "सर्वर एरर" });
+    res.status(500).json({ 
+      success: false, 
+      message: "सर्वर एरर: हिसाब सेव नहीं हो पाया। चेक करें कि monthly_totals टेबल बनी है या नहीं।" 
+    });
   }
 };
