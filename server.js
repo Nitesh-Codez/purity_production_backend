@@ -5,6 +5,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const milkRoutes = require("./routes/milkRoutes");
+const monthlyBillRoutes = require("./routes/monthlyBillRoutes");
 
 const app = express();
 app.use(cors());
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use("/", authRoutes);
 app.use("/api", customerRoutes); 
 app.use("/api", milkRoutes);
+app.use("/api",monthlyBillRoutes);
 
 app.get("/", (req, res) => res.send("API Running"));
 
