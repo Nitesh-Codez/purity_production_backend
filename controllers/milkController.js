@@ -79,32 +79,35 @@ exports.addMilkEntry = async (req, res) => {
 // =============================
 // DAILY MILK REPORT
 // =============================
-exports.getDailyMilkReport = async (req, res) => {
+// =============================
+// MONTHLY MILK ENTRIES
+// =============================
+exports.getMonthlyEntries = async (req, res) => {
   try {
 
-    const { date } = req.query;
+    const { month, year } = req.query;
 
-    if (!date) {
+    if (!month || !year) {
       return res.status(400).json({
         success: false,
-        message: "Date required"
+        message: "month और year जरूरी हैं"
       });
     }
 
     const sql = `
       SELECT 
-        u.id,
         u.name,
-        u.daily_milk AS default_milk,
-        COALESCE(m.milk_quantity, u.daily_milk) AS actual_milk
-      FROM users u
-      LEFT JOIN milk_entries m
-      ON u.id = m.user_id AND m.delivery_date = $1
+        m.delivery_date,
+        m.milk_quantity
+      FROM milk_entries m
+      JOIN users u ON u.id = m.user_id
       WHERE u.role = 'customer'
-      ORDER BY u.name
+      AND EXTRACT(MONTH FROM m.delivery_date) = $1
+      AND EXTRACT(YEAR FROM m.delivery_date) = $2
+      ORDER BY m.delivery_date
     `;
 
-    const result = await db.query(sql, [date]);
+    const result = await db.query(sql, [month, year]);
 
     res.json({
       success: true,
@@ -113,7 +116,7 @@ exports.getDailyMilkReport = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Daily Report Error:", error);
+    console.error("Monthly Entries Error:", error);
     res.status(500).json({
       success: false,
       message: "Server Error"
