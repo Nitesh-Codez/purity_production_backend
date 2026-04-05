@@ -22,5 +22,7 @@ router.post("/save-entry", milkController.addMilkEntry);
 // MONTHLY REPORT
 router.get("/monthly-entries", milkController.getMonthlyEntries);
 
+//
+router.post("/save-monthly-total", milkController.saveMonthlyTotals);
 
 module.exports = router;

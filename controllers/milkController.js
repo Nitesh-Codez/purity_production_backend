@@ -166,3 +166,49 @@ exports.getMonthlyEntries = async (req, res) => {
     });
   }
 };
+
+// =============================
+// CALCULATE & SAVE MONTHLY TOTALS
+// =============================
+exports.saveMonthlyTotals = async (req, res) => {
+  try {
+    const { month, year } = req.body;
+
+    if (!month || !year) {
+      return res.status(400).json({ success: false, message: "Month और Year जरूरी हैं" });
+    }
+
+    // SQL: यह दूध की सभी एंट्रीज को जोड़ता है और 'monthly_totals' टेबल में डाल देता है
+    // अगर रिकॉर्ड पहले से है, तो 'ON CONFLICT' उसे अपडेट (Update) कर देगा
+    const sql = `
+      INSERT INTO monthly_totals (user_id, month, year, total_quantity)
+      SELECT 
+        user_id, 
+        $1 AS month, 
+        $2 AS year, 
+        SUM(milk_quantity) as total_quantity
+      FROM milk_entries
+      WHERE EXTRACT(MONTH FROM delivery_date) = $1
+        AND EXTRACT(YEAR FROM delivery_date) = $2
+      GROUP BY user_id
+      ON CONFLICT (user_id, month, year)
+      DO UPDATE SET 
+        total_quantity = EXCLUDED.total_quantity,
+        updated_at = NOW()
+      RETURNING *;
+    `;
+
+    const result = await db.query(sql, [month, year]);
+
+    res.json({
+      success: true,
+      message: `महीने (${month}/${year}) का कुल हिसाब सेव कर दिया गया है।`,
+      count: result.rows.length,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error("Save Totals Error:", error);
+    res.status(500).json({ success: false, message: "सर्वर एरर: हिसाब सेव नहीं हो पाया" });
+  }
+};
