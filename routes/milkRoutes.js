@@ -15,6 +15,9 @@ router.post("/milk-entry", milkController.addMilkEntry);
 // DAILY REPORT
 router.get("/daily-report", milkController.getDailyMilkReport);
 
+//
+router.post("/save-entry", milkController.addMilkEntry);
+//monthly Entries 
 
 // MONTHLY REPORT
 router.get("/monthly-entries", milkController.getMonthlyEntries);
