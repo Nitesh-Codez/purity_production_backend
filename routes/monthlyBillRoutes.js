@@ -8,7 +8,7 @@ router.get("/", monthlyBillController.getMonthlyBill);
 // POST to save money column in DB
 router.post("/save", monthlyBillController.saveMonthlyBillMoney);
 
-router.get("/details/:userId", getMonthlyDetails);
+router.get("/details/:userId", monthlyBillController.getMonthlyDetails);
 
 
 
