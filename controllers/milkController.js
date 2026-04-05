@@ -170,6 +170,7 @@ exports.getMonthlyEntries = async (req, res) => {
 // ===========================================
 // CALCULATE & SAVE MONTHLY TOTALS (FINAL)
 // ===========================================
+// Controller: monthly totals
 exports.saveMonthlyTotals = async (req, res) => {
   try {
     const { month, year } = req.body;
@@ -178,19 +179,23 @@ exports.saveMonthlyTotals = async (req, res) => {
       return res.status(400).json({ success: false, message: "Month/Year missing" });
     }
 
+    // SQL: All customers, sum milk, handle missing entries
     const sql = `
       INSERT INTO monthly_totals (user_id, month, year, total_quantity)
       SELECT 
-        user_id, 
-        $1 AS month, 
-        $2 AS year, 
-        SUM(CAST(milk_quantity AS DECIMAL)) as total_quantity
-      FROM milk_entries
-      WHERE EXTRACT(MONTH FROM delivery_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = $1
-        AND EXTRACT(YEAR FROM delivery_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = $2
-      GROUP BY user_id
+        u.id AS user_id,
+        $1 AS month,
+        $2 AS year,
+        COALESCE(SUM(me.milk_quantity), 0) AS total_quantity
+      FROM users u
+      LEFT JOIN milk_entries me 
+        ON u.id = me.user_id
+        AND EXTRACT(MONTH FROM me.delivery_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = $1
+        AND EXTRACT(YEAR FROM me.delivery_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = $2
+      WHERE u.role = 'customer'
+      GROUP BY u.id
       ON CONFLICT (user_id, month, year)
-      DO UPDATE SET 
+      DO UPDATE SET
         total_quantity = EXCLUDED.total_quantity,
         updated_at = NOW()
       RETURNING *;
@@ -200,12 +205,12 @@ exports.saveMonthlyTotals = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Data Synced",
+      message: "Monthly totals synced successfully",
       data: result.rows
     });
 
   } catch (error) {
-    console.error("Mismatch Error:", error);
-    res.status(500).json({ success: false, message: "Check if 'user_id' exists in milk_entries" });
+    console.error("Error saving monthly totals:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
