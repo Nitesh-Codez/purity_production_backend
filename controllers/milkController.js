@@ -79,6 +79,49 @@ exports.addMilkEntry = async (req, res) => {
 // =============================
 // DAILY MILK REPORT
 // =============================
+exports.getDailyMilkReport = async (req, res) => {
+  try {
+
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: "Date required"
+      });
+    }
+
+    const sql = `
+      SELECT 
+        u.id,
+        u.name,
+        u.daily_milk AS default_milk,
+        COALESCE(m.milk_quantity, u.daily_milk) AS actual_milk
+      FROM users u
+      LEFT JOIN milk_entries m
+      ON u.id = m.user_id AND m.delivery_date = $1
+      WHERE u.role = 'customer'
+      ORDER BY u.name
+    `;
+
+    const result = await db.query(sql, [date]);
+
+    res.json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error("Daily Report Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+};
+
+//
 // =============================
 // MONTHLY MILK ENTRIES
 // =============================
