@@ -4,13 +4,15 @@ const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const customerRoutes = require("./routes/customerRoutes");
+const milkRoutes = require("./routes/milkRoutes");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 app.use("/", authRoutes);
-app.use("/api", customerRoutes); // इसके अंदर ही अब /translate-list है
+app.use("/api", customerRoutes); 
+app.use("/api", milkRoutes);
 
 app.get("/", (req, res) => res.send("API Running"));
 
