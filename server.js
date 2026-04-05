@@ -1,59 +1,35 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const translate = require("google-translate-api-x"); // लाइब्रेरी इम्पोर्ट करें
 
 const authRoutes = require("./routes/authRoutes");
+
 const customerRoutes = require("./routes/customerRoutes");
+
 
 const app = express();
 
 app.use(cors());
+
 app.use(express.json());
 
-// --- TRANSLATION LOGIC START ---
-app.post("/api/translate-list", async (req, res) => {
-  try {
-    const { texts, targetLang } = req.body;
-
-    if (!texts || !Array.isArray(texts)) {
-      return res.status(400).json({ error: "Texts array is required" });
-    }
-
-    // एक साथ कई शब्दों को ट्रांसलेट करने का फास्ट तरीका
-    const translations = await Promise.all(
-      texts.map(async (text) => {
-        try {
-          const result = await translate(text, { to: targetLang || "hi" });
-          return { original: text, translated: result.text };
-        } catch (err) {
-          return { original: text, translated: text }; // फेल होने पर ओरिजिनल वापस भेजें
-        }
-      })
-    );
-
-    // फ्रंटेंड के लिए आसान मैप बनाना { "Name": "नाम" }
-    const translationMap = {};
-    translations.forEach((item) => {
-      translationMap[item.original] = item.translated;
-    });
-
-    res.json(translationMap);
-  } catch (error) {
-    console.error("Translation Endpoint Error:", error);
-    res.status(500).json({ error: "Translation failed" });
-  }
-});
-// --- TRANSLATION LOGIC END ---
 
 app.use("/", authRoutes);
+
 app.use("/api", customerRoutes);
 
+
 app.get("/", (req, res) => {
+
   res.send("Purity Production API Running");
+
 });
 
+
 const PORT = process.env.PORT || 5000;
+
+
+
 app.listen(PORT, () => {
+
   console.log(`Server running on port ${PORT}`);
-});
