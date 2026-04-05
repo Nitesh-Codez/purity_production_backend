@@ -49,3 +49,41 @@ exports.addMilkEntry = async (req, res) => {
     res.status(500).json({ success:false });
   }
 };
+
+
+const pool = require("../config/db"); // आपका DB कनेक्शन
+
+export const getDailyMilkReport = async (req, res) => {
+  try {
+    const { date } = req.query; // तारीख Query Params से आएगी (YYYY-MM-DD)
+
+    if (!date) {
+      return res.status(400).json({ success: false, message: "Date is required" });
+    }
+
+    // SQL Query: Users की डिटेल्स और उस Date का Milk Status
+    // मान लेते हैं तुम्हारी अटेंडेंस/लॉग टेबल का नाम 'milk_records' है
+    const query = `
+      SELECT 
+        u.id, 
+        u.name, 
+        u.daily_milk AS default_milk,
+        COALESCE(m.quantity, u.daily_milk) AS actual_milk,
+        COALESCE(m.status, 'pending') AS delivery_status
+      FROM users u
+      LEFT JOIN milk_records m ON u.id = m.user_id AND m.delivery_date = $1
+      ORDER BY u.name ASC;
+    `;
+
+    const result = await pool.query(query, [date]);
+
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("Error fetching daily report:", err);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
