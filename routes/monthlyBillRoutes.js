@@ -7,5 +7,7 @@ router.get("/", monthlyBillController.getMonthlyBill);
 
 // POST to save money column in DB
 router.post("/save", monthlyBillController.saveMonthlyBillMoney);
+//
+router.get("/details/:userId", getMonthlyDetails);
 
 module.exports = router;
