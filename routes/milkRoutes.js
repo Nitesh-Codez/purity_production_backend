@@ -25,4 +25,8 @@ router.get("/monthly-entries", milkController.getMonthlyEntries);
 //
 router.post("/save-monthly-total", milkController.saveMonthlyTotals);
 
+//
+//
+router.get("/details/:userId", getMonthlyDetails);
+
 module.exports = router;
