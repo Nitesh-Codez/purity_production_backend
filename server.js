@@ -14,7 +14,7 @@ app.use(express.json());
 app.use("/", authRoutes);
 app.use("/api", customerRoutes); 
 app.use("/api", milkRoutes);
-app.use("/api",monthlyBillRoutes);
+app.use("/api/monthly-bill", monthlyBillRoutes);
 
 app.get("/", (req, res) => res.send("API Running"));
 
