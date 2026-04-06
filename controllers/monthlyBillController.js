@@ -123,24 +123,32 @@ exports.getMonthlySummary = async (req, res) => {
   }
 };
 // Get monthly details for a single customer
+// Get monthly details for a single customer
 exports.getMonthlyDetails = async (req, res) => {
   try {
     const { userId } = req.params;
     const { month, year } = req.query;
 
+    // यहाँ हमने GROUP BY का उपयोग किया है ताकि एक तारीख की एक ही रो आए
     const result = await db.query(
-  `SELECT me.*, u.name, u.daily_milk
-   FROM milk_entries me
-   JOIN users u ON u.id = me.user_id
-   WHERE me.user_id = $1
-     AND EXTRACT(MONTH FROM me.delivery_date) = $2
-     AND EXTRACT(YEAR FROM me.delivery_date) = $3
-   ORDER BY me.delivery_date`,
-  [userId, month, year]
-);
-res.json({ data: result.rows }); // yahi data frontend pe use hoga
+      `SELECT 
+          me.delivery_date, 
+          u.name, 
+          u.daily_milk as daily_limit,
+          SUM(me.daily_milk) AS milk_quantity -- यहाँ सारा दूध जोड़ दिया
+       FROM milk_entries me
+       JOIN users u ON u.id = me.user_id
+       WHERE me.user_id = $1
+         AND EXTRACT(MONTH FROM me.delivery_date) = $2
+         AND EXTRACT(YEAR FROM me.delivery_date) = $3
+       GROUP BY me.delivery_date, u.name, u.daily_milk
+       ORDER BY me.delivery_date ASC`,
+      [userId, month, year]
+    );
+
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error(err);
+    console.error("Detail Fetch Error:", err);
     res.status(500).json({ error: "Server Error" });
   }
 };
