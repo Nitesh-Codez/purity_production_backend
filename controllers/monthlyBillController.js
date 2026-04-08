@@ -152,3 +152,48 @@ exports.getMonthlyDetails = async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 };
+
+// controllers/dashboardController.js
+
+const pool = require("../db"); // postgres connection
+
+exports.getMilkCards = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+
+    const result = await pool.query(
+      `
+      SELECT 
+        u.name,
+        mt.month,
+        mt.year,
+        mt.total_quantity AS total_milk,
+        mt.money AS total_money,
+
+        COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days,
+
+        (mt.money) AS bill_total
+
+      FROM monthly_totals mt
+      JOIN users u ON u.id = mt.user_id
+      LEFT JOIN milk_entries me 
+        ON me.user_id = u.id
+        AND EXTRACT(MONTH FROM me.delivery_date) = mt.month
+        AND EXTRACT(YEAR FROM me.delivery_date) = mt.year
+
+      WHERE mt.month = $1 AND mt.year = $2
+      AND u.role = 'customer'
+
+      GROUP BY u.name, mt.month, mt.year, mt.total_quantity, mt.money
+      ORDER BY u.name
+      `,
+      [month, year]
+    );
+
+    res.json(result.rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};

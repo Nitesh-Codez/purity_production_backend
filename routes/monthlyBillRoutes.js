@@ -13,6 +13,7 @@ router.get("/summary", monthlyBillController.getMonthlySummary);
 // ✅ GET monthly details for a single customer
 router.get("/details/:userId", monthlyBillController.getMonthlyDetails);
 
+router.get("/cards", getMilkCards);
 
 
 
