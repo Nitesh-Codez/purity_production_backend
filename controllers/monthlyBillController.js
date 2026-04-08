@@ -14,19 +14,26 @@ exports.getMonthlyBill = async (req, res) => {
       });
     }
 
-    // Fetch monthly totals
     const sql = `
       SELECT 
         u.id AS user_id,
         u.name,
-        COALESCE(mt.total_quantity, 0) AS total_milk,
-        ROUND(COALESCE(mt.total_quantity, 0) * $3, 2) AS total_money
+
+        COALESCE(SUM(m.milk_quantity),0) AS total_milk,
+
+        ROUND(COALESCE(SUM(m.milk_quantity),0) * $3,2) AS total_money
+
       FROM users u
-      LEFT JOIN monthly_totals mt
-        ON u.id = mt.user_id
-        AND mt.month = $1
-        AND mt.year = $2
+
+      LEFT JOIN milk_entries m
+        ON u.id = m.user_id
+        AND EXTRACT(MONTH FROM m.delivery_date) = $1
+        AND EXTRACT(YEAR FROM m.delivery_date) = $2
+
       WHERE u.role = 'customer'
+
+      GROUP BY u.id, u.name
+
       ORDER BY u.name
     `;
 
@@ -46,7 +53,6 @@ exports.getMonthlyBill = async (req, res) => {
     });
   }
 };
-
 // =============================
 // SAVE MONEY INTO MONTHLY TOTALS
 // =============================
@@ -96,33 +102,52 @@ exports.saveMonthlyBillMoney = async (req, res) => {
 // SUMMARY CARD DATA
 exports.getMonthlySummary = async (req, res) => {
   try {
+
     const { month, year } = req.query;
 
-    const resData = await db.query(
-      `SELECT u.id, u.name,
-              SUM(m.daily_milk) AS total_milk,
-              COUNT(*) FILTER (WHERE m.daily_milk = 0) AS total_naga,
-              COALESCE(mt.money, SUM(m.daily_milk) * 80) AS total_money
-       FROM users u
-       LEFT JOIN milk_entries m
-         ON u.id = m.user_id
-         AND EXTRACT(MONTH FROM m.delivery_date) = $1
-         AND EXTRACT(YEAR FROM m.delivery_date) = $2
-       LEFT JOIN monthly_totals mt
-         ON u.id = mt.user_id AND mt.month = $1 AND mt.year = $2
-       WHERE u.role = 'customer'
-       GROUP BY u.id, u.name, mt.money
-       ORDER BY u.name`,
-      [month, year]
-    );
+    const sql = `
+      SELECT 
+        u.id,
+        u.name,
 
-    return res.json(resData.rows);
+        COALESCE(SUM(m.milk_quantity),0) AS total_milk,
+
+        COUNT(
+          CASE WHEN m.milk_quantity = 0 THEN 1 END
+        ) AS total_naga,
+
+        ROUND(COALESCE(SUM(m.milk_quantity),0) * 80,2) AS total_money
+
+      FROM users u
+
+      LEFT JOIN milk_entries m
+        ON u.id = m.user_id
+        AND EXTRACT(MONTH FROM m.delivery_date) = $1
+        AND EXTRACT(YEAR FROM m.delivery_date) = $2
+
+      WHERE u.role = 'customer'
+
+      GROUP BY u.id, u.name
+
+      ORDER BY u.name
+    `;
+
+    const result = await db.query(sql, [month, year]);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
-// Get monthly details for a single customer
+//Get monthly details for a single customer
 // Get monthly details for a single customer
 exports.getMonthlyDetails = async (req, res) => {
   try {
