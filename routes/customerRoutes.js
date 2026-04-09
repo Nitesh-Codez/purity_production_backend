@@ -52,7 +52,6 @@ router.get(
   "/customer/today-milk", customerController.getCustomerTodayMilk
 );
 
-
 // =============================
 // CUSTOMER CURRENT MONTH LIST
 // =============================

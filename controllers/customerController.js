@@ -132,3 +132,42 @@ exports.getCustomerTodayMilk = async (req, res) => {
   }
 
 };
+
+// ===============================
+// CUSTOMER CURRENT MONTH MILK LIST
+// ===============================
+exports.getCustomerCurrentMonth = async (req, res) => {
+
+  try {
+
+    const userId = req.user.id;
+
+    const sql = `
+      SELECT 
+        delivery_date,
+        milk_quantity
+      FROM milk_entries
+      WHERE user_id = $1
+      AND DATE_TRUNC('month', delivery_date) = DATE_TRUNC('month', CURRENT_DATE)
+      ORDER BY delivery_date ASC
+    `;
+
+    const result = await db.query(sql, [userId]);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+
+  }
+
+};
