@@ -49,9 +49,7 @@ router.get("/customers", customerController.getAllCustomers);
 // CUSTOMER TODAY MILK
 // =============================
 router.get(
-  "/customer/today-milk",
-  authMiddleware,
-  customerController.getCustomerTodayMilk
+  "/customer/today-milk", customerController.getCustomerTodayMilk
 );
 
 
@@ -59,9 +57,7 @@ router.get(
 // CUSTOMER CURRENT MONTH LIST
 // =============================
 router.get(
-  "/customer/current-month",
-  authMiddleware,
-  customerController.getCustomerCurrentMonth
+  "/customer/current-month", customerController.getCustomerCurrentMonth
 );
 
 module.exports = router;
