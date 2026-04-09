@@ -44,4 +44,24 @@ router.delete("/delete-customer/:id", customerController.deleteCustomer);
 router.put("/update-customer/:id", customerController.updateCustomer);
 router.get("/customers", customerController.getAllCustomers);
 
+
+// =============================
+// CUSTOMER TODAY MILK
+// =============================
+router.get(
+  "/customer/today-milk",
+  authMiddleware,
+  customerController.getCustomerTodayMilk
+);
+
+
+// =============================
+// CUSTOMER CURRENT MONTH LIST
+// =============================
+router.get(
+  "/customer/current-month",
+  authMiddleware,
+  customerController.getCustomerCurrentMonth
+);
+
 module.exports = router;

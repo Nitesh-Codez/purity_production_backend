@@ -87,3 +87,48 @@ exports.getAllCustomers = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+
+
+//================================================================//
+//Customer controllers//
+//=================================================================================//
+
+// ===============================
+// CUSTOMER TODAY MILK
+// ===============================
+exports.getCustomerTodayMilk = async (req, res) => {
+
+  try {
+
+    const userId = req.user.id;
+
+    const sql = `
+      SELECT 
+        u.name,
+        CURRENT_DATE AS delivery_date,
+        COALESCE(m.milk_quantity, u.daily_milk) AS milk_quantity
+      FROM users u
+      LEFT JOIN milk_entries m
+        ON u.id = m.user_id
+        AND m.delivery_date = CURRENT_DATE
+      WHERE u.id = $1
+    `;
+
+    const result = await db.query(sql,[userId]);
+
+    res.json({
+      success:true,
+      data:result.rows[0]
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success:false,
+      message:"Server error"
+    });
+
+  }
+
+};
