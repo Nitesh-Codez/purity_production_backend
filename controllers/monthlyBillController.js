@@ -147,81 +147,75 @@ exports.getMonthlySummary = async (req, res) => {
     });
   }
 };
-
-// Get monthly details for a single customer
+//Get monthly details for a single customer
 // Get monthly details for a single customer
 exports.getMonthlyDetails = async (req, res) => {
   try {
     const { userId } = req.params;
     const { month, year } = req.query;
 
+    // यहाँ हमने GROUP BY का उपयोग किया है ताकि एक तारीख की एक ही रो आए
     const result = await db.query(
-      `
-      SELECT 
-        me.delivery_date,
-        u.id AS user_id,
-        u.name,
-        u.daily_milk AS daily_limit,
-        SUM(me.milk_quantity) AS milk_quantity
-      FROM milk_entries me
-      JOIN users u ON u.id = me.user_id
-      WHERE me.user_id = $1
-        AND EXTRACT(MONTH FROM me.delivery_date) = $2
-        AND EXTRACT(YEAR FROM me.delivery_date) = $3
-      GROUP BY me.delivery_date, u.id, u.name, u.daily_milk
-      ORDER BY me.delivery_date ASC
-      `,
+      `SELECT 
+          me.delivery_date, 
+          u.name, 
+          u.daily_milk as daily_limit,
+          SUM(me.daily_milk) AS milk_quantity -- यहाँ सारा दूध जोड़ दिया
+       FROM milk_entries me
+       JOIN users u ON u.id = me.user_id
+       WHERE me.user_id = $1
+         AND EXTRACT(MONTH FROM me.delivery_date) = $2
+         AND EXTRACT(YEAR FROM me.delivery_date) = $3
+       GROUP BY me.delivery_date, u.name, u.daily_milk
+       ORDER BY me.delivery_date ASC`,
       [userId, month, year]
     );
 
-    res.json({
-      success: true,
-      data: result.rows
-    });
-
+    res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error("Detail Fetch Error:", err);
-    res.status(500).json({
-      success: false,
-      error: "Server Error"
-    });
+    res.status(500).json({ error: "Server Error" });
   }
 };
-//=================================================================
-//CARDS
-//========================================
+
+// controllers/dashboardController.js
+
 exports.getMilkCards = async (req, res) => {
   try {
-    const month = parseInt(req.query.month);
-    const year = parseInt(req.query.year);
+    const { month, year } = req.query;
 
-    const result = await db.query(
+    const result = await pool.query(
       `
       SELECT 
-        u.id as user_id,
         u.name,
-        COALESCE(SUM(me.milk_quantity),0) AS total_milk,
-        COALESCE(SUM(me.milk_quantity) * 80,0) AS total_money,
-        COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days
+        $1 AS month,
+        $2 AS year,
+        -- Real-time total milk calculate karo
+        COALESCE(SUM(me.milk_quantity), 0) AS total_milk,
+        -- Naga days (0 quantity entries)
+        COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days,
+        -- Jo price table mein save hai wahi uthao ya default logic lagao
+        COALESCE(mt.money, 0) AS total_money,
+        COALESCE(mt.money, 0) AS bill_total
       FROM users u
-      LEFT JOIN milk_entries me
-        ON me.user_id = u.id
-        AND EXTRACT(MONTH FROM me.delivery_date) = $1
+      LEFT JOIN milk_entries me 
+        ON u.id = me.user_id 
+        AND EXTRACT(MONTH FROM me.delivery_date) = $1 
         AND EXTRACT(YEAR FROM me.delivery_date) = $2
-      WHERE u.role='customer'
-      GROUP BY u.id, u.name
+      LEFT JOIN monthly_totals mt 
+        ON u.id = mt.user_id 
+        AND mt.month = $1 
+        AND mt.year = $2
+      WHERE u.role = 'customer'
+      GROUP BY u.id, u.name, mt.money
       ORDER BY u.name
       `,
       [month, year]
     );
 
-    res.json({
-      success: true,
-      data: result.rows
-    });
-
-  } catch (err) {
-    console.error("Milk Cards Error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
