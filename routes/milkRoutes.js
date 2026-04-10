@@ -25,8 +25,12 @@ router.get("/monthly-entries", milkController.getMonthlyEntries);
 //
 router.post("/save-monthly-total", milkController.saveMonthlyTotals);
 
-//
-//
+
+
+router.get("/today/:customer_id", milkController.getTodayMilk);
+
+// 📌 Monthly milk (filter via query)
+router.get("/monthly/:customer_id", milkController.getMonthlyMilk);
 
 
 module.exports = router;

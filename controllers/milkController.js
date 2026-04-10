@@ -214,3 +214,92 @@ exports.saveMonthlyTotals = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
+
+
+
+
+
+//===================================================================================
+//=================================================================
+// controllers/milkController.js
+const db = require("../db");
+
+// ==========================
+// GET TODAY MILK
+// ==========================
+exports.getTodayMilk = async (req, res) => {
+  try {
+    const { customer_id } = req.params;
+
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    const sql = `
+      SELECT *
+      FROM milk_entries
+      WHERE customer_id = $1
+      AND date = $2
+    `;
+
+    const result = await db.query(sql, [customer_id, today]);
+
+    return res.json({
+      success: true,
+      date: today,
+      data: result.rows,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching today's milk",
+      error: error.message,
+    });
+  }
+};
+
+// ==========================
+// GET MONTHLY MILK
+// ==========================
+exports.getMonthlyMilk = async (req, res) => {
+  try {
+    const { customer_id } = req.params;
+    const { month, year } = req.query;
+
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "month and year are required",
+      });
+    }
+
+    const sql = `
+      SELECT *
+      FROM milk_entries
+      WHERE customer_id = $1
+      AND EXTRACT(MONTH FROM date) = $2
+      AND EXTRACT(YEAR FROM date) = $3
+      ORDER BY date ASC
+    `;
+
+    const result = await db.query(sql, [
+      customer_id,
+      month,
+      year,
+    ]);
+
+    return res.json({
+      success: true,
+      month,
+      year,
+      data: result.rows,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching monthly milk",
+      error: error.message,
+    });
+  }
+};
