@@ -190,44 +190,37 @@ exports.getMonthlyDetails = async (req, res) => {
 //=================================================================
 //CARDS
 //========================================
-
 exports.getMilkCards = async (req, res) => {
   try {
     const { month, year } = req.query;
 
-    const result = await pool.query(
+    const result = await db.query(
       `
       SELECT 
+        u.id as user_id,
         u.name,
-        mt.month,
-        mt.year,
-        mt.total_quantity AS total_milk,
-        mt.money AS total_money,
-
-        COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days,
-
-        (mt.money) AS bill_total
-
-      FROM monthly_totals mt
-      JOIN users u ON u.id = mt.user_id
-      LEFT JOIN milk_entries me 
+        COALESCE(SUM(me.milk_quantity),0) AS total_milk,
+        COALESCE(SUM(me.milk_quantity) * 80,0) AS total_money,
+        COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days
+      FROM users u
+      LEFT JOIN milk_entries me
         ON me.user_id = u.id
-        AND EXTRACT(MONTH FROM me.delivery_date) = mt.month
-        AND EXTRACT(YEAR FROM me.delivery_date) = mt.year
-
-      WHERE mt.month = $1 AND mt.year = $2
-      AND u.role = 'customer'
-
-      GROUP BY u.name, mt.month, mt.year, mt.total_quantity, mt.money
+        AND EXTRACT(MONTH FROM me.delivery_date) = $1
+        AND EXTRACT(YEAR FROM me.delivery_date) = $2
+      WHERE u.role='customer'
+      GROUP BY u.id, u.name
       ORDER BY u.name
       `,
       [month, year]
     );
 
-    res.json(result.rows);
+    res.json({
+      success: true,
+      data: result.rows
+    });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server Error" });
+  } catch (err) {
+    console.error("Milk Cards Error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 };
