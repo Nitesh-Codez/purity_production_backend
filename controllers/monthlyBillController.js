@@ -192,7 +192,8 @@ exports.getMonthlyDetails = async (req, res) => {
 //========================================
 exports.getMilkCards = async (req, res) => {
   try {
-    const { month, year } = req.query;
+    const month = parseInt(req.query.month);
+    const year = parseInt(req.query.year);
 
     const result = await db.query(
       `
