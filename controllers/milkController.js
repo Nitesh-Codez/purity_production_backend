@@ -235,8 +235,8 @@ exports.getTodayMilk = async (req, res) => {
     const sql = `
       SELECT *
       FROM milk_entries
-      WHERE customer_id = $1
-      AND date = $2
+      WHERE user_id = $1
+      AND delivery_date = $2
     `;
 
     const result = await db.query(sql, [customer_id, today]);
@@ -255,7 +255,6 @@ exports.getTodayMilk = async (req, res) => {
     });
   }
 };
-
 // ==========================
 // GET MONTHLY MILK
 // ==========================
