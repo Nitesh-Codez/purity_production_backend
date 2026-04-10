@@ -177,12 +177,11 @@ exports.getMonthlyDetails = async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 };
-
 exports.getMilkCards = async (req, res) => {
   try {
+
     const { month, year } = req.query;
 
-    // Data types ko sanitize karna zaroori hai
     const targetMonth = parseInt(month);
     const targetYear = parseInt(year);
 
@@ -207,17 +206,19 @@ exports.getMilkCards = async (req, res) => {
       ORDER BY u.name;
     `;
 
-    const result = await pool.query(query, [targetMonth, targetYear]);
+    const result = await db.query(query, [targetMonth, targetYear]);
 
-    // Agar data empty bhi ho toh empty array bhejo, error nahi
     res.status(200).json(result.rows);
-    
+
   } catch (error) {
-    console.error("Database Error:", error.message);
-    res.status(500).json({ 
-      success: false, 
-      message: "Internal Server Error", 
-      error: error.message 
+
+    console.error("Database Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message
     });
+
   }
 };
