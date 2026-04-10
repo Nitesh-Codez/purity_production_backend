@@ -179,43 +179,46 @@ exports.getMonthlyDetails = async (req, res) => {
 };
 
 // controllers/dashboardController.js
-
 exports.getMilkCards = async (req, res) => {
   try {
     const { month, year } = req.query;
+
+    // Validate inputs to prevent crashes
+    if (!month || !year) {
+      return res.status(400).json({ message: "Month and Year are required" });
+    }
 
     const result = await pool.query(
       `
       SELECT 
         u.name,
-        $1 AS month,
-        $2 AS year,
-        -- Real-time total milk calculate karo
+        u.id as user_id,
+        $1::integer AS month,
+        $2::integer AS year,
         COALESCE(SUM(me.milk_quantity), 0) AS total_milk,
-        -- Naga days (0 quantity entries)
         COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days,
-        -- Jo price table mein save hai wahi uthao ya default logic lagao
-        COALESCE(mt.money, 0) AS total_money,
-        COALESCE(mt.money, 0) AS bill_total
+        COALESCE(MAX(mt.money), 0) AS total_money,
+        COALESCE(MAX(mt.money), 0) AS bill_total
       FROM users u
       LEFT JOIN milk_entries me 
         ON u.id = me.user_id 
-        AND EXTRACT(MONTH FROM me.delivery_date) = $1 
+        AND EXTRACT(MONTH FROM me.delivery_date) = $1
         AND EXTRACT(YEAR FROM me.delivery_date) = $2
       LEFT JOIN monthly_totals mt 
         ON u.id = mt.user_id 
         AND mt.month = $1 
         AND mt.year = $2
       WHERE u.role = 'customer'
-      GROUP BY u.id, u.name, mt.money
+      -- Yahan sirf u.name aur u.id kafi hai agar aggregates sahi lage ho
+      GROUP BY u.id, u.name
       ORDER BY u.name
       `,
-      [month, year]
+      [parseInt(month), parseInt(year)]
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    console.error("Query Error Details:", error); // Check your Render/Terminal logs for this!
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
