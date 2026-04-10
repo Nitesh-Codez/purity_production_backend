@@ -178,27 +178,21 @@ exports.getMonthlyDetails = async (req, res) => {
   }
 };
 
-// controllers/dashboardController.js
 exports.getMilkCards = async (req, res) => {
   try {
     const { month, year } = req.query;
 
-    // Validate inputs to prevent crashes
-    if (!month || !year) {
-      return res.status(400).json({ message: "Month and Year are required" });
-    }
+    // Data types ko sanitize karna zaroori hai
+    const targetMonth = parseInt(month);
+    const targetYear = parseInt(year);
 
-    const result = await pool.query(
-      `
+    const query = `
       SELECT 
+        u.id AS user_id,
         u.name,
-        u.id as user_id,
-        $1::integer AS month,
-        $2::integer AS year,
         COALESCE(SUM(me.milk_quantity), 0) AS total_milk,
         COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days,
-        COALESCE(MAX(mt.money), 0) AS total_money,
-        COALESCE(MAX(mt.money), 0) AS bill_total
+        COALESCE(MAX(mt.money), 0) AS total_money
       FROM users u
       LEFT JOIN milk_entries me 
         ON u.id = me.user_id 
@@ -209,16 +203,21 @@ exports.getMilkCards = async (req, res) => {
         AND mt.month = $1 
         AND mt.year = $2
       WHERE u.role = 'customer'
-      -- Yahan sirf u.name aur u.id kafi hai agar aggregates sahi lage ho
       GROUP BY u.id, u.name
-      ORDER BY u.name
-      `,
-      [parseInt(month), parseInt(year)]
-    );
+      ORDER BY u.name;
+    `;
 
-    res.json(result.rows);
+    const result = await pool.query(query, [targetMonth, targetYear]);
+
+    // Agar data empty bhi ho toh empty array bhejo, error nahi
+    res.status(200).json(result.rows);
+    
   } catch (error) {
-    console.error("Query Error Details:", error); // Check your Render/Terminal logs for this!
-    res.status(500).json({ message: "Server Error", error: error.message });
+    console.error("Database Error:", error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal Server Error", 
+      error: error.message 
+    });
   }
 };
