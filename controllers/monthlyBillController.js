@@ -223,7 +223,6 @@ exports.getMilkCards = async (req, res) => {
   }
 };
 
-
 // =============================
 // GET SINGLE CUSTOMER MONTHLY LIST (DATE + MILK)
 // =============================
@@ -232,26 +231,27 @@ exports.getMyMonthlyMilk = async (req, res) => {
     let { userId } = req.params;
     let { month, year } = req.query;
 
-    // Convert to number (IMPORTANT FIX)
-    userId = parseInt(userId);
-    month = parseInt(month);
-    year = parseInt(year);
+    // ✅ Strict number conversion + validation
+    userId = Number(userId);
+    month = Number(month);
+    year = Number(year);
 
-    if (!userId || !month || !year) {
+    if (!userId || !month || !year || isNaN(userId) || isNaN(month) || isNaN(year)) {
       return res.status(400).json({
         success: false,
-        message: "userId, month aur year required hai"
+        message: "Valid userId, month aur year required hai"
       });
     }
 
+    // ✅ Better query (DATE FILTER instead of EXTRACT - FAST + RELIABLE)
     const sql = `
       SELECT 
         delivery_date AS date,
         COALESCE(milk_quantity, 0) AS milk_quantity
       FROM milk_entries
       WHERE user_id = $1
-        AND EXTRACT(MONTH FROM delivery_date) = $2
-        AND EXTRACT(YEAR FROM delivery_date) = $3
+        AND delivery_date >= DATE_TRUNC('month', TO_DATE($2 || '-' || $3, 'MM-YYYY'))
+        AND delivery_date < DATE_TRUNC('month', TO_DATE($2 || '-' || $3, 'MM-YYYY')) + INTERVAL '1 month'
       ORDER BY delivery_date ASC
     `;
 
