@@ -224,14 +224,18 @@ exports.getMilkCards = async (req, res) => {
 };
 
 
-
 // =============================
 // GET SINGLE CUSTOMER MONTHLY LIST (DATE + MILK)
 // =============================
 exports.getMyMonthlyMilk = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { month, year } = req.query;
+    let { userId } = req.params;
+    let { month, year } = req.query;
+
+    // Convert to number (IMPORTANT FIX)
+    userId = parseInt(userId);
+    month = parseInt(month);
+    year = parseInt(year);
 
     if (!userId || !month || !year) {
       return res.status(400).json({
@@ -243,7 +247,7 @@ exports.getMyMonthlyMilk = async (req, res) => {
     const sql = `
       SELECT 
         delivery_date AS date,
-        milk_quantity
+        COALESCE(milk_quantity, 0) AS milk_quantity
       FROM milk_entries
       WHERE user_id = $1
         AND EXTRACT(MONTH FROM delivery_date) = $2
@@ -253,7 +257,7 @@ exports.getMyMonthlyMilk = async (req, res) => {
 
     const result = await db.query(sql, [userId, month, year]);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: result.rows.length,
       data: result.rows
@@ -261,7 +265,8 @@ exports.getMyMonthlyMilk = async (req, res) => {
 
   } catch (error) {
     console.error("Customer Monthly Milk Error:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: "Server Error"
     });
