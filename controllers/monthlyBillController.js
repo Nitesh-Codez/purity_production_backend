@@ -222,3 +222,48 @@ exports.getMilkCards = async (req, res) => {
 
   }
 };
+
+
+
+// =============================
+// GET SINGLE CUSTOMER MONTHLY LIST (DATE + MILK)
+// =============================
+exports.getMyMonthlyMilk = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { month, year } = req.query;
+
+    if (!userId || !month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "userId, month aur year required hai"
+      });
+    }
+
+    const sql = `
+      SELECT 
+        delivery_date AS date,
+        milk_quantity
+      FROM milk_entries
+      WHERE user_id = $1
+        AND EXTRACT(MONTH FROM delivery_date) = $2
+        AND EXTRACT(YEAR FROM delivery_date) = $3
+      ORDER BY delivery_date ASC
+    `;
+
+    const result = await db.query(sql, [userId, month, year]);
+
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error("Customer Monthly Milk Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+};
