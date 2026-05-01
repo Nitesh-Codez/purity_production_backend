@@ -180,33 +180,47 @@ exports.getMonthlyDetails = async (req, res) => {
 exports.getMilkCards = async (req, res) => {
   try {
 
-    const { month, year } = req.query;
+    const { month, year, price_per_kg } = req.query;
 
     const targetMonth = parseInt(month);
     const targetYear = parseInt(year);
+    const price = parseFloat(price_per_kg || 80);
 
     const query = `
       SELECT 
         u.id AS user_id,
         u.name,
+
         COALESCE(SUM(me.milk_quantity), 0) AS total_milk,
-        COUNT(CASE WHEN me.milk_quantity = 0 THEN 1 END) AS naga_days,
-        COALESCE(MAX(mt.money), 0) AS total_money
+
+        COUNT(
+          CASE WHEN me.milk_quantity = 0 THEN 1 END
+        ) AS naga_days,
+
+        ROUND(
+          COALESCE(SUM(me.milk_quantity), 0) * $3,
+          2
+        ) AS total_money
+
       FROM users u
+
       LEFT JOIN milk_entries me 
         ON u.id = me.user_id 
         AND EXTRACT(MONTH FROM me.delivery_date) = $1
         AND EXTRACT(YEAR FROM me.delivery_date) = $2
-      LEFT JOIN monthly_totals mt 
-        ON u.id = mt.user_id 
-        AND mt.month = $1 
-        AND mt.year = $2
+
       WHERE u.role = 'customer'
+
       GROUP BY u.id, u.name
+
       ORDER BY u.name;
     `;
 
-    const result = await db.query(query, [targetMonth, targetYear]);
+    const result = await db.query(query, [
+      targetMonth,
+      targetYear,
+      price
+    ]);
 
     res.status(200).json(result.rows);
 
