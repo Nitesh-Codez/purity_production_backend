@@ -59,4 +59,11 @@ router.get(
   "/customer/current-month", customerController.getCustomerCurrentMonth
 );
 
+
+//=====================================================================
+//customer side
+//=======================================================
+// Customer ki monthly list dekhne ka route
+router.get("/monthly-bill/customer/:userId/milk", customerController.getMyMonthlyMilk);
+
 module.exports = router;

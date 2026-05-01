@@ -15,7 +15,5 @@ router.get("/details/:userId", monthlyBillController.getMonthlyDetails);
 
 router.get("/cards", monthlyBillController.getMilkCards);//
 
-// Single person milk list (For customer)
-router.get("/customer/:userId/milk", monthlyBillController.getMyMonthlyMilk);
-
+ 
 module.exports = router;

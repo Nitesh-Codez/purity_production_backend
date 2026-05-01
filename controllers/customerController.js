@@ -171,3 +171,58 @@ exports.getCustomerCurrentMonth = async (req, res) => {
   }
 
 };
+
+
+
+
+//=====================================================================
+//CUSTOMER SIDE 
+//======================================================================
+// =============================
+// GET SINGLE CUSTOMER MONTHLY LIST (DATE + MILK)
+// =============================
+exports.getMyMonthlyMilk = async (req, res) => {
+  try {
+    let { userId } = req.params;
+    let { month, year } = req.query;
+
+    // Strict number conversion
+    const uId = Number(userId);
+    const m = Number(month);
+    const y = Number(year);
+
+    if (!uId || !m || !y || isNaN(uId) || isNaN(m) || isNaN(y)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid userId, month aur year required hain"
+      });
+    }
+
+    // Direct Date filter for high performance
+    const sql = `
+      SELECT 
+        delivery_date AS date,
+        COALESCE(milk_quantity, 0) AS milk_quantity
+      FROM milk_entries
+      WHERE user_id = $1
+        AND EXTRACT(MONTH FROM delivery_date) = $2
+        AND EXTRACT(YEAR FROM delivery_date) = $3
+      ORDER BY delivery_date ASC
+    `;
+
+    const result = await db.query(sql, [uId, m, y]);
+
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error("Customer Monthly Milk Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+};
