@@ -66,4 +66,10 @@ router.get(
 // Customer ki monthly list dekhne ka route
 router.get("/monthly-bill/customer/:userId/milk", customerController.getMyMonthlyMilk);
 
+// Monthly Milk Record
+router.get("/monthly/:userId", customerController.getMonthlyMilkRecord);
+
+// Monthly Bill
+router.get("/bill/:userId", customerController.getMonthlyBill);
+
 module.exports = router;
