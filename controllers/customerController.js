@@ -346,7 +346,7 @@ exports.getMonthlyBill = async (req, res) => {
     const selectedYear = Number(year);
 
     if (
-      isNaN(selectedMonth) ||
+      !Number.isInteger(selectedMonth) ||
       selectedMonth < 1 ||
       selectedMonth > 12
     ) {
@@ -356,7 +356,7 @@ exports.getMonthlyBill = async (req, res) => {
       });
     }
 
-    if (isNaN(selectedYear)) {
+    if (!Number.isInteger(selectedYear)) {
       return res.status(400).json({
         success: false,
         message: "Invalid year",
@@ -364,7 +364,7 @@ exports.getMonthlyBill = async (req, res) => {
     }
 
     // ---------------------------------------------
-    // Get customer details
+    // 1. Get customer details
     // ---------------------------------------------
 
     const customerSql = `
@@ -394,7 +394,7 @@ exports.getMonthlyBill = async (req, res) => {
     const customer = customerResult.rows[0];
 
     // ---------------------------------------------
-    // Get monthly total
+    // 2. Get monthly total + BILL
     // ---------------------------------------------
 
     const totalSql = `
@@ -410,17 +410,18 @@ exports.getMonthlyBill = async (req, res) => {
       WHERE user_id = $1
         AND month = $2
         AND year = $3
+      ORDER BY updated_at DESC
       LIMIT 1
     `;
 
     const totalResult = await db.query(totalSql, [
       userId,
       selectedMonth,
-      selectedYear
+      selectedYear,
     ]);
 
     // ---------------------------------------------
-    // If monthly total exists
+    // 3. Monthly total exists
     // ---------------------------------------------
 
     if (totalResult.rows.length > 0) {
@@ -441,18 +442,25 @@ exports.getMonthlyBill = async (req, res) => {
         },
 
         bill: {
-          month: bill.month,
-          year: bill.year,
+          month: Number(bill.month),
+          year: Number(bill.year),
+
+          // monthly_totals se
           total_milk: Number(bill.total_quantity || 0),
+
+          // monthly_totals.money se
           total_bill: Number(bill.money || 0),
+
           updated_at: bill.updated_at,
+
+          source: "monthly_totals",
         },
       });
     }
 
     // ---------------------------------------------
-    // If monthly total doesn't exist
-    // Calculate total directly from milk_entries
+    // 4. Monthly total doesn't exist
+    // Get milk directly from milk_entries
     // ---------------------------------------------
 
     const milkSql = `
@@ -467,7 +475,7 @@ exports.getMonthlyBill = async (req, res) => {
     const milkResult = await db.query(milkSql, [
       userId,
       selectedMonth,
-      selectedYear
+      selectedYear,
     ]);
 
     const totalMilk = Number(
@@ -492,10 +500,15 @@ exports.getMonthlyBill = async (req, res) => {
         month: selectedMonth,
         year: selectedYear,
         total_milk: totalMilk,
+
+        // monthly_totals nahi hai,
+        // isliye abhi bill available nahi
         total_bill: 0,
+
         source: "milk_entries",
+
         message:
-          "Monthly total found from milk entries. Bill amount is not available in monthly_totals.",
+          "Monthly total is not available for this month.",
       },
     });
 
