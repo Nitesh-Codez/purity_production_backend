@@ -328,17 +328,10 @@ exports.getMonthlyBill = async (req, res) => {
     const { userId } = req.params;
     const { month, year } = req.query;
 
-    if (!userId) {
+    if (!userId || !month || !year) {
       return res.status(400).json({
         success: false,
-        message: "User ID is required",
-      });
-    }
-
-    if (!month || !year) {
-      return res.status(400).json({
-        success: false,
-        message: "Month and year are required",
+        message: "userId, month and year are required",
       });
     }
 
@@ -363,10 +356,7 @@ exports.getMonthlyBill = async (req, res) => {
       });
     }
 
-    // ---------------------------------------------
-    // 1. Get customer details
-    // ---------------------------------------------
-
+    // 1. Customer
     const customerSql = `
       SELECT
         id,
@@ -393,79 +383,11 @@ exports.getMonthlyBill = async (req, res) => {
 
     const customer = customerResult.rows[0];
 
-    // ---------------------------------------------
-    // 2. Get monthly total + BILL
-    // ---------------------------------------------
-
-    const totalSql = `
-      SELECT
-        id,
-        user_id,
-        month,
-        year,
-        total_quantity,
-        money,
-        updated_at
-      FROM monthly_totals
-      WHERE user_id = $1
-        AND month = $2
-        AND year = $3
-      ORDER BY updated_at DESC
-      LIMIT 1
-    `;
-
-    const totalResult = await db.query(totalSql, [
-      userId,
-      selectedMonth,
-      selectedYear,
-    ]);
-
-    // ---------------------------------------------
-    // 3. Monthly total exists
-    // ---------------------------------------------
-
-    if (totalResult.rows.length > 0) {
-      const bill = totalResult.rows[0];
-
-      return res.status(200).json({
-        success: true,
-
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          mobile: customer.mobile,
-          address: customer.address,
-          joining_date: customer.joining_date,
-          shift: customer.shift,
-          default_milk_quantity: customer.default_milk_quantity,
-          daily_milk: customer.daily_milk,
-        },
-
-        bill: {
-          month: Number(bill.month),
-          year: Number(bill.year),
-
-          // monthly_totals se
-          total_milk: Number(bill.total_quantity || 0),
-
-          // monthly_totals.money se
-          total_bill: Number(bill.money || 0),
-
-          updated_at: bill.updated_at,
-
-          source: "monthly_totals",
-        },
-      });
-    }
-
-    // ---------------------------------------------
-    // 4. Monthly total doesn't exist
-    // Get milk directly from milk_entries
-    // ---------------------------------------------
-
+    // 2. ACTUAL MONTHLY MILK FROM milk_entries
     const milkSql = `
       SELECT
-        COALESCE(SUM(milk_quantity), 0) AS total_quantity
+        COALESCE(SUM(milk_quantity), 0) AS total_quantity,
+        COUNT(*) AS total_entries
       FROM milk_entries
       WHERE user_id = $1
         AND EXTRACT(MONTH FROM delivery_date) = $2
@@ -481,6 +403,16 @@ exports.getMonthlyBill = async (req, res) => {
     const totalMilk = Number(
       milkResult.rows[0]?.total_quantity || 0
     );
+
+    const totalEntries = Number(
+      milkResult.rows[0]?.total_entries || 0
+    );
+
+    // 3. RATE
+    const rate = 80;
+
+    // 4. BILL
+    const totalBill = totalMilk * rate;
 
     return res.status(200).json({
       success: true,
@@ -500,15 +432,10 @@ exports.getMonthlyBill = async (req, res) => {
         month: selectedMonth,
         year: selectedYear,
         total_milk: totalMilk,
-
-        // monthly_totals nahi hai,
-        // isliye abhi bill available nahi
-        total_bill: 0,
-
+        total_entries: totalEntries,
+        rate: rate,
+        total_bill: totalBill,
         source: "milk_entries",
-
-        message:
-          "Monthly total is not available for this month.",
       },
     });
 
